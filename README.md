@@ -27,7 +27,7 @@ TrafficerMC has a variety of features. Some of them are:
  - [Proxies](#proxies)
  - and way more!
 
-#### Minecraft Version 1.8.x - 1.20
+#### Minecraft Version 1.8.x - 1.21.11
 
 ##### Check out [Build Guide](#build-guide) to build TrafficerMC for your machine.
 
