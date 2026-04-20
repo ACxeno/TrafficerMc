@@ -1,6 +1,6 @@
 # TrafficerMC
 
-⚠️ This version of the program is no longer actively maintained.
+⚠️ I developed this so that all features in this are free to use. There are no charges or anything like that.
 
 ## Features
 TrafficerMC includes the following main features:
