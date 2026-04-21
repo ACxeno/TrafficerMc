@@ -21,8 +21,31 @@ import { easyMcAuth } from './js/misc/customAuth'
 import EventEmitter from 'node:events'
 const Store = require('electron-store')
 const mineflayer = require('mineflayer')
+const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
 import { antiafk } from './js/misc/antiafk'
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+
+async function sendWebhook(content) {
+  const config = storeinfo()
+  if (!config.boolean.enableWebhook || !config.value.webhookLink) return
+  try {
+    await fetch(config.value.webhookLink, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: null,
+        embeds: [{
+          title: 'TrafficerMC Notification',
+          description: content,
+          color: 5814783,
+          timestamp: new Date().toISOString()
+        }]
+      })
+    })
+  } catch (err) {
+    console.error('Webhook error:', err)
+  }
+}
 
 const botApi = new EventEmitter()
 botApi.setMaxListeners(0)
@@ -34,8 +57,9 @@ let stopProxyTest = false
 let currentProxy = 0
 let proxyUsed = 0
 
+let configCache = store.get('config') || {}
 function storeinfo() {
-  return store.get('config')
+  return configCache
 }
 
 let clientVersion = 3.1
@@ -119,6 +143,8 @@ app.whenReady().then(() => {
 })
 
 ipcMain.on('setConfig', (event, type, id, value) => {
+  if (!configCache[type]) configCache[type] = {}
+  configCache[type][id] = value
   store.set(`config.${type}.${id}`, value)
 })
 
@@ -126,14 +152,7 @@ ipcMain.on('deleteConfig', () => {
   store.delete('config')
 })
 
-ipcMain.on('checkboxClick', (event, id, state) => {
-  switch (id) {
-    case 'test':
-      console.log(state)
-      break
-    default:
-  }
-})
+
 
 ipcMain.on('btnClick', (event, btn) => {
   switch (btn) {
@@ -172,10 +191,11 @@ ipcMain.on('btnClick', (event, btn) => {
       exeAll('closewindow')
       break
     case 'btnStartMove':
-      exeAll('startmove ' + storeinfo().value.moveType)
+      exeAll('resetmove')
+      exeAll('startmove ' + (storeinfo().value.moveType || 'forward'))
       break
     case 'btnStopMove':
-      exeAll('stopmove ' + storeinfo().value.moveType)
+      exeAll('stopmove ' + (storeinfo().value.moveType || 'forward'))
       break
     case 'btnResetMove':
       exeAll('resetmove')
@@ -210,6 +230,30 @@ ipcMain.on('btnClick', (event, btn) => {
       notify('Info', 'Scraping proxies...', 'success')
       setProxy()
       break
+    case 'webhookTest':
+      sendWebhook('This is a test notification from TrafficerMC!')
+      notify('Webhook', 'Test sent!', 'success')
+      break
+    case 'btnPathGoto':
+      const px = storeinfo().value.pathX
+      const py = storeinfo().value.pathY
+      const pz = storeinfo().value.pathZ
+      if (px === undefined || py === undefined || pz === undefined) return notify('Error', 'Invalid coordinates', 'error')
+      exeAll(`goto ${px} ${py} ${pz}`)
+      break
+    case 'btnPathStop':
+      exeAll('pathstop')
+      break
+    case 'btnInteractRight':
+      const coordsR = (storeinfo().value.interactCoords || '').split(' ')
+      if (coordsR.length !== 3) return notify('Error', 'Invalid coordinates (X Y Z)', 'error')
+      exeAll(`interact ${coordsR[0]} ${coordsR[1]} ${coordsR[2]} right`)
+      break
+    case 'btnInteractLeft':
+      const coordsL = (storeinfo().value.interactCoords || '').split(' ')
+      if (coordsL.length !== 3) return notify('Error', 'Invalid coordinates (X Y Z)', 'error')
+      exeAll(`interact ${coordsL[0]} ${coordsL[1]} ${coordsL[2]} left`)
+      break
     default:
       break
   }
@@ -232,34 +276,45 @@ async function testProxy(list) {
   const [serverHost, serverPort] = server.split(':')
   if (!serverHost) return notify('Error', 'Invalid server address', 'error')
   if (!list) return notify('Error', 'Please enter proxy list', 'error')
-  if (storeinfo().value.proxyType === 'none') return notify('Error', 'Select proxy type', 'error')
   notify('Info', 'Testing proxies...', 'success')
   proxyEvent('', 'start', '', '')
-  const lines = list.split(/\r?\n/)
-  for (let i = 0; i < lines.length; i++) {
-    if (stopProxyTest) break
+  const lines = list.split(/\r?\n/).filter((l) => l.trim().length > 0)
+  let testedCount = 0
+  const maxConcurrency = 10
+  let currentIndex = 0
+
+  async function checkNext() {
+    if (currentIndex >= lines.length || stopProxyTest) return
+    const i = currentIndex++
     const count = `${i + 1}/${lines.length}`
     const [host, port, username, password] = lines[i].split(':')
-    checkProxy(
-      storeinfo().value.proxyType,
-      host,
-      port,
-      username,
-      password,
-      serverHost,
-      serverPort || 25565,
-      storeinfo().value.proxyCheckTimeout || 5000
-    )
-      .then((result) => {
-        proxyEvent(result.proxy, 'success', '', count)
-      })
-      .catch((error) => {
-        proxyEvent(error.proxy, 'fail', error.reason, count)
-      })
-    if (lines.length == i + 1) {
-      proxyEvent('', 'stop', '', '')
+
+    try {
+      const result = await checkProxy(
+        configCache.value.proxyType,
+        host,
+        port,
+        username,
+        password,
+        serverHost,
+        serverPort || 25565,
+        configCache.value.proxyCheckTimeout || 5000
+      )
+      proxyEvent(result.proxy, 'success', '', count)
+    } catch (error) {
+      proxyEvent(error.proxy, 'fail', error.reason, count)
+    } finally {
+      testedCount++
+      if (testedCount === lines.length || (stopProxyTest && testedCount === currentIndex)) {
+        proxyEvent('', 'stop', '', '')
+      }
+      await delay(configCache.value.proxyCheckDelay || 50)
+      if (!stopProxyTest) checkNext()
     }
-    await delay(storeinfo().value.proxyCheckDelay || 100)
+  }
+
+  for (let j = 0; j < Math.min(maxConcurrency, lines.length); j++) {
+    checkNext()
   }
 }
 
@@ -476,19 +531,28 @@ function newBot(options) {
       team: false,
       time: false,
       title: false,
-      villager: false
+      villager: false,
+      physics: true
     },
     onMsaCode: (data) => {
       sendEvent(options.username, 'authmsg', data.user_code)
+      if (storeinfo().boolean.authLogWebhook) {
+        sendWebhook(`Bot **${options.username}** needs Microsoft Auth: **${data.user_code}**`)
+      }
     }
   })
+  bot.loadPlugin(pathfinder)
 
   let hitTimer = 0
 
   bot.once('login', () => {
-    sendEvent(bot._client.username, 'login')
+    const username = bot.username || options.username
+    sendEvent(username, 'login')
+    if (storeinfo().boolean.joinLogWebhook) {
+      sendWebhook(`Bot **${username}** has logged in to **${options.host}**`)
+    }
     if (storeinfo().boolean.runOnConnect) {
-      startScript(bot._client.username)
+      startScript(username)
     }
     if (storeinfo().value.joinMessage) {
       bot.chat(storeinfo().value.joinMessage)
@@ -499,46 +563,106 @@ function newBot(options) {
   })
   bot.on('spawn', () => {
     if (storeinfo().boolean.runOnSpawn) {
-      startScript(bot._client.username)
+      startScript(bot.username)
     }
   })
   bot.on('messagestr', (msg) => {
-    sendEvent(bot._client.username, 'chat', msg)
+    sendEvent(bot.username, 'chat', msg)
   })
   bot.on('windowOpen', (window) => {
     sendEvent(
-      bot._client.username,
+      bot.username,
       'chat',
       `Window Opened ' ${window.title ? ':' + window.title : ''}`
     )
   })
   bot.on('windowClose', (window) => {
     sendEvent(
-      bot._client.username,
+      bot.username,
       'chat',
       `Window Closed ' ${window.title ? ':' + window.title : ''}`
     )
   })
   bot.once('kicked', (reason) => {
-    const parsed = JSON.parse(reason)
-    sendEvent(bot._client.username, 'kicked', cleanText(parsed))
-  })
-  bot.once('end', (reason) => {
-    sendEvent(bot._client.username, 'end', reason)
-    if (storeinfo().boolean.autoReconnect) {
-      setTimeout(() => {
-        newBot(options)
-      }, storeinfo().value.reconnectDelay || 1000)
+    try {
+      const username = bot.username || options.username
+      const parsed = typeof reason === 'string' ? JSON.parse(reason) : reason
+      const text = cleanText(parsed)
+      sendEvent(username, 'kicked', text)
+      if (storeinfo().boolean.kickLogWebhook) {
+        sendWebhook(`Bot **${username}** was kicked: ${text}`)
+      }
+    } catch (e) {
+      const username = bot.username || options.username
+      sendEvent(username, 'kicked', reason)
+      if (storeinfo().boolean.kickLogWebhook) {
+        sendWebhook(`Bot **${username}** was kicked (raw): ${reason}`)
+      }
     }
   })
 
+  let physicsTickCounter = 0
+  let movements = null
+
   bot.on('physicTick', () => {
-    if (storeinfo().boolean.killauraToggle && playerList.includes(bot._client.username)) {
+    if (!bot.entity) return
+    physicsTickCounter++
+    const config = storeinfo()
+    if (physicsTickCounter % 20 === 0) {
+      // reserved for future use
+    }
+    if (config?.boolean?.nukerToggle && physicsTickCounter % (config.value.nukerBlocksPerTick || 1) === 0) {
+      nuker()
+    }
+
+    if (physicsTickCounter % 4 !== 0) return
+    if (config?.boolean?.killauraToggle && playerList.includes(bot.username)) {
       killaura()
     }
   })
 
+  function nuker() {
+    if (!bot.entity || bot.targetDigBlock) return
+    const config = storeinfo()
+    const rUp = parseInt(config.value.nukerRangeUp || 0)
+    const rDown = parseInt(config.value.nukerRangeDown || 0)
+    const rLeft = parseInt(config.value.nukerRangeLeft || 0)
+    const rRight = parseInt(config.value.nukerRangeRight || 0)
+    const rForward = parseInt(config.value.nukerRangeForward || 0)
+    const rBack = parseInt(config.value.nukerRangeBack || 0)
+
+    const blocks = (config.value.nukerBlocks || '').split(',').map(b => b.trim().toLowerCase())
+    const mode = config.value.nukerTargetMode || 'blacklist'
+
+    const pos = bot.entity.position.floored()
+    for (let x = -rLeft; x <= rRight; x++) {
+      for (let y = -rDown; y <= rUp; y++) {
+        for (let z = -rBack; z <= rForward; z++) {
+          const targetPos = pos.offset(x, y, z)
+          const block = bot.blockAt(targetPos)
+          if (!block || block.name === 'air' || block.name === 'water' || block.name === 'lava') continue
+
+          const isMatch = (blocks.length === 1 && blocks[0] === '') ? false : blocks.includes(block.name)
+          const shouldDig = mode === 'whitelist' ? isMatch : !isMatch
+
+          if (shouldDig) {
+            if (config.boolean.nukerRotate) bot.lookAt(targetPos)
+            bot.dig(block).catch(() => { })
+            return
+          }
+        }
+      }
+    }
+  }
+
+
+
+  bot.on('death', () => {
+    bot.respawn()
+  })
+
   function killaura() {
+    if (!bot.entity) return
     if (hitTimer <= 0) {
       hit(
         storeinfo().boolean.targetPlayer,
@@ -555,35 +679,28 @@ function newBot(options) {
   }
 
   function hit(player, vehicle, mob, animal, maxDistance, rotate) {
-    let targetEntities = []
+    if (!bot.entity) return
+    const maxDistSq = parseFloat(maxDistance) ** 2
     const entities = Object.values(bot.entities)
-    entities.forEach((entity) => {
-      const distance = bot.entity.position.distanceTo(entity.position)
-      if (distance >= parseFloat(maxDistance)) return
-      if (entity.type === 'player' && entity.username !== bot.username && player) {
-        targetEntities.push(entity)
-      }
-      if (entity.kind === 'Vehicles' && vehicle) {
-        targetEntities.push(entity)
-      }
-      if (entity.kind === 'Hostile mobs' && mob) {
-        targetEntities.push(entity)
-      }
-      if (entity.kind === 'Passive mobs' && animal) {
-        targetEntities.push(entity)
-      }
-    })
-    targetEntities.forEach((entity) => {
-      if (rotate) {
-        bot.lookAt(entity.position, true)
-        bot.attack(entity)
-      } else {
+    for (const entity of entities) {
+      if (entity === bot.entity) continue
+      const distSq = bot.entity.position.distanceSquared(entity.position)
+      if (distSq > maxDistSq) continue
+
+      let isTarget = false
+      if (player && entity.type === 'player' && entity.username !== bot.username) isTarget = true
+      else if (vehicle && entity.kind === 'Vehicles') isTarget = true
+      else if (mob && entity.kind === 'Hostile mobs') isTarget = true
+      else if (animal && entity.kind === 'Passive mobs') isTarget = true
+
+      if (isTarget) {
+        if (rotate) bot.lookAt(entity.position, true)
         bot.attack(entity)
       }
-    })
+    }
   }
 
-  botApi.on('botEvent', (target, event, ...options) => {
+  const botEventListener = (target, event, ...options) => {
     if (target !== bot._client.username) return
     const optionsArray = options[0]
     switch (event) {
@@ -603,11 +720,11 @@ function newBot(options) {
         notify(
           'Bot',
           bot._client.username +
-            ': ' +
-            optionsArray
-              .join(' ')
-              .replaceAll('{random}', salt(4))
-              .replaceAll('{player}', bot._client.username),
+          ': ' +
+          optionsArray
+            .join(' ')
+            .replaceAll('{random}', salt(4))
+            .replaceAll('{player}', bot._client.username),
           'success'
         )
         break
@@ -626,7 +743,7 @@ function newBot(options) {
         bot.clickWindow(-999, 0, 0)
         break
       case 'dropall':
-        ;(async () => {
+        ; (async () => {
           const itemCount = bot.inventory.items().length
           for (var i = 0; i < itemCount; i++) {
             if (bot.inventory.items().length === 0) return
@@ -666,7 +783,67 @@ function newBot(options) {
         const rotate = optionsArray[5]
         hit(player, vehicle, mob, animal, maxDistance, rotate)
         break
+      case 'goto':
+        const x = parseFloat(optionsArray[0])
+        const y = parseFloat(optionsArray[1])
+        const z = parseFloat(optionsArray[2])
+        if (!movements) {
+          movements = new Movements(bot)
+          movements.canDig = true
+          movements.allow1by1towers = true
+          movements.allowParkour = true
+          movements.allowSprinting = true
+          const scaffoldBlocks = bot.inventory.items().filter(item => bot.registry.blocksByName[item.name]?.boundingBox === 'block')
+          movements.scafoldingBlocks = scaffoldBlocks.map(i => i.type)
+        }
+        bot.pathfinder.setMovements(movements)
+        bot.pathfinder.setGoal(new goals.GoalBlock(x, y, z))
+        break
+      case 'pathstop':
+        bot.pathfinder.stop()
+        break
+      case 'follow':
+        const targetPlayer = bot.players[optionsArray[0]]
+        if (targetPlayer && targetPlayer.entity) {
+          if (!movements) {
+            movements = new Movements(bot)
+            movements.canDig = true
+            movements.allow1by1towers = true
+            movements.allowParkour = true
+            movements.allowSprinting = true
+          }
+          bot.pathfinder.setMovements(movements)
+          bot.pathfinder.setGoal(new goals.GoalFollow(targetPlayer.entity, 1), true)
+        }
+        break
+      case 'interact':
+        const ix = parseFloat(optionsArray[0])
+        const iy = parseFloat(optionsArray[1])
+        const iz = parseFloat(optionsArray[2])
+        const side = optionsArray[3]
+        const targetBlock = bot.blockAt(new mineflayer.vec3(ix, iy, iz))
+        if (targetBlock) {
+          if (side === 'left') {
+            bot.dig(targetBlock).catch(() => { })
+          } else {
+            bot.activateBlock(targetBlock).catch(() => { })
+          }
+        }
+        break
       default:
+    }
+  }
+
+  botApi.on('botEvent', botEventListener)
+
+  bot.once('end', (reason) => {
+    const username = bot.username || options.username
+    botApi.removeListener('botEvent', botEventListener)
+    sendEvent(username, 'end', reason)
+    if (storeinfo().boolean.autoReconnect) {
+      setTimeout(() => {
+        newBot(options)
+      }, Math.max(storeinfo().value.reconnectDelay || 1000, 1000))
     }
   })
 }

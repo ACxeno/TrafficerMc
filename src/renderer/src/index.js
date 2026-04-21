@@ -3,7 +3,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   window.electron?.ipcRenderer.on('setConfig', (event, config, version) => {
     setConfigValues(config)
-    fetch('https://raw.githubusercontent.com/RattlesHyper/TrafficerMC/main/VERSION', {
+    fetch('https://raw.githubusercontent.com/ACxeno/TrafficerMC/main/VERSION', {
       method: 'GET'
     })
       .then((response) => response.text())
@@ -123,11 +123,6 @@ window.addEventListener('DOMContentLoaded', () => {
       default:
     }
   })
-  // setInterval(() => {
-  //   logChat('Bot', 'Username', 'TEST')
-  //   notify('TEST', 'Welcome back User', 'success')
-  //   logProxy('proxy:port', 'fail', 'Test')
-  // }, 1000)
 })
 
 function valueChange(event) {
@@ -372,6 +367,9 @@ function logProxy(proxy, type, message) {
   li.appendChild(ddiv)
 
   logBox.appendChild(li)
+  if (logBox.children.length > 200) {
+    logBox.removeChild(logBox.firstChild)
+  }
   if (scroll) {
     logBox.scrollTop = logBox.scrollHeight
   }
@@ -450,6 +448,9 @@ function logChat(prefix, name, text) {
   li.appendChild(textP)
 
   chatBox.appendChild(li)
+  if (chatBox.children.length > 200) {
+    chatBox.removeChild(chatBox.firstChild)
+  }
 
   if (scroll) {
     chatBox.scrollTop = chatBox.scrollHeight

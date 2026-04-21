@@ -42,7 +42,7 @@ export function checkProxy(
       }
     })
 
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       bot.end()
       const info = {
         reason: 'timeout',
@@ -52,6 +52,7 @@ export function checkProxy(
     }, timeout)
 
     bot.on('connect', () => {
+      clearTimeout(timer)
       bot.end()
       const info = {
         reason: 'success',
@@ -61,6 +62,7 @@ export function checkProxy(
     })
 
     bot.on('error', (error) => {
+      clearTimeout(timer)
       const info = {
         reason: 'bad',
         error: error.message,

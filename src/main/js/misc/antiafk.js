@@ -16,7 +16,7 @@ async function swingArm(bot) {
   await bot.swingArm(arm)
 }
 async function start(bot) {
-  if (bot.afk.stopping) {
+  if (!bot.afk.enabled || bot.afk.stopping) {
     bot.afk.stopped = true
     return
   }
@@ -25,7 +25,11 @@ async function start(bot) {
     return
   }
   if (bot.entity.isInWater) bot.setControlState('jump', true)
-  await bot.afk[bot.afk.config.actions[Math.floor(Math.random() * 3)]]()
+  const action = bot.afk.config.actions[Math.floor(Math.random() * bot.afk.config.actions.length)]
+  if (bot.afk[action]) {
+    await bot.afk[action]()
+  }
+  await new Promise((resolve) => setTimeout(resolve, 1000))
   start(bot)
 }
 
@@ -37,11 +41,15 @@ function setOptions(bot) {
 function stop(bot) {
   bot.afk.stopping = true
   return new Promise((resolve) => {
-    if (!bot.afk.enabled) resolve('nothing to stop')
-    setInterval(() => {
+    if (!bot.afk.enabled) {
+      bot.afk.stopping = false
+      return resolve('nothing to stop')
+    }
+    const interval = setInterval(() => {
       if (bot.afk.stopped) {
-        bot.afk.stopping = null
-        bot.afk.stopped = null
+        clearInterval(interval)
+        bot.afk.stopping = false
+        bot.afk.stopped = false
         bot.afk.enabled = false
         resolve('stopped successfully')
       }
@@ -53,8 +61,13 @@ export function antiafk(bot) {
   bot.afk = {
     config: {},
     enabled: false,
+    stopping: false,
+    stopped: false,
     start: async () => {
+      if (bot.afk.enabled) return
       bot.afk.enabled = true
+      bot.afk.stopping = false
+      bot.afk.stopped = false
       await start(bot)
     },
     stop: async () => await stop(bot),

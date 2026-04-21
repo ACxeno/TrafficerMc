@@ -210,54 +210,52 @@ export function genName() {
   const nounsLength = nouns.length
   let name = ''
 
-  while (name.length < 6 || name.length + 1 > 16) {
+  while (name.length < 6) {
     const adjectiveIndex = Math.floor(Math.random() * adjectivesLength)
     const nounIndex = Math.floor(Math.random() * nounsLength)
     const newName = `${adjectives[adjectiveIndex]}${nouns[nounIndex]}`
 
-    if (newName.length + name.length > 16) {
-      break
-    }
-
+    if (name.length + newName.length > 16) break
     name += newName
 
-    if (Math.random() < 0.15) {
-      const num = Math.floor(Math.random() * 999 + 1)
-      if (name.length + num.toString().length > 16) {
-        break
+    if (Math.random() < 0.2) {
+      const num = Math.floor(Math.random() * 99 + 1)
+      if (name.length + num.toString().length <= 16) {
+        name += num
       }
-      name += num
     }
   }
-
-  const lowerCaseName = name.toLowerCase()
-  const hasLowerCase = name !== lowerCaseName
-  name += hasLowerCase ? lowerCaseName.slice(0, 16 - name.length) : ''
 
   return name
 }
 
 export function sendEvent(username, event, message) {
+  const window = BrowserWindow.getAllWindows()[0]
+  if (!window) return
   const info = {
     id: username,
     event: event,
     message: message
   }
-  BrowserWindow.getAllWindows()[0].webContents.send('botEvent', info)
+  window.webContents.send('botEvent', info)
 }
 
 export function proxyEvent(proxy, event, message, count) {
+  const window = BrowserWindow.getAllWindows()[0]
+  if (!window) return
   const info = {
     proxy: proxy,
     event: event,
     message: message,
     count: count
   }
-  BrowserWindow.getAllWindows()[0].webContents.send('proxyEvent', info)
+  window.webContents.send('proxyEvent', info)
 }
 
 export function notify(title, body, type, img, keep) {
-  BrowserWindow.getAllWindows()[0].webContents.send('notify', title, body, type, img, keep)
+  const window = BrowserWindow.getAllWindows()[0]
+  if (!window) return
+  window.webContents.send('notify', title, body, type, img, keep)
 }
 
 export function cleanText(string) {

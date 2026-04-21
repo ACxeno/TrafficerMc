@@ -26,7 +26,7 @@
         <li id="bottingTab" class="tab tab-pane">Botting</li>
         <li class="tab tab-pane">Scripting</li>
         <li class="tab tab-pane">Proxy</li>
-        <li class="tab tab-pane disabled">Webhook</li>
+        <li class="tab tab-pane">Webhook</li>
         <li class="tab tab-pane">About</li>
       </ul>
 
@@ -119,6 +119,13 @@
                 <p class="text-sm">Version:</p>
                 <select id="version" class="mu-1">
                   <option value="">Auto</option>
+                  <option value="1.21.11">1.21.11</option>
+                  <option value="1.21.3">1.21.3</option>
+                  <option value="1.21.2">1.21.2</option>
+                  <option value="1.21.1">1.21.1</option>
+                  <option value="1.21">1.21</option>
+                  <option value="1.20.6">1.20.6</option>
+                  <option value="1.20.5">1.20.5</option>
                   <option value="1.20.4">1.20.4</option>
                   <option value="1.20.3">1.20.3</option>
                   <option value="1.20.2">1.20.2</option>
@@ -202,9 +209,9 @@
                 <li class="tab-2 control-tab">Look</li>
                 <li class="tab-2 control-tab">AntiAFK</li>
                 <li class="tab-2 control-tab">KillAura</li>
-                <li class="tab-2 control-tab disabled">Interact</li>
-                <li class="tab-2 control-tab disabled">Nuker</li>
-                <li class="tab-2 control-tab disabled">Pathfinder</li>
+                <li class="tab-2 control-tab">Interact</li>
+                <li class="tab-2 control-tab">Nuker</li>
+                <li class="tab-2 control-tab">Pathfinder</li>
               </ul>
 
             </div>
@@ -277,7 +284,7 @@
 
                 <div class="mu-2 space-h-f">
                   <button id="btnSetHotbar">Set</button>
-                  <button  id="btnUseheld">Use</button>
+                  <button id="btnUseheld">Use</button>
                 </div>
 
               </div>
@@ -367,11 +374,11 @@
 
               </div>
               <div id="interact" class="control-tab" style="display: none;">
-                <p class="text">Interact [Premium]</p>
+                <p class="text">Interact</p>
 
                 <div class="flex mu-2">
                   <p class="text-sm pr-4">Coords</p>
-                  <input id="interactCoords" type="text" placeholder="eg: 0 1 0" disabled>
+                  <input id="interactCoords" type="text" placeholder="eg: 0 1 0">
                 </div>
                 <div class="space-h-f mu-2">
                   <p class="text-sm">Mouse button</p>
@@ -456,7 +463,7 @@
               </div>
 
               <div id="nuker" class="control-tab" style="display: none;">
-                <p class="text">Nuker [Premium]</p>
+                <p class="text">Nuker</p>
                 <div class="mu-2">
 
                   <div class="space-h-f">
@@ -558,6 +565,13 @@
                 <p class="text">Pathfinder</p>
                 <div class="mu-2">
 
+                  <div class="flex mu-2">
+                    <input id="pathX" type="number" placeholder="X" style="width: 60px;">
+                    <input id="pathY" type="number" placeholder="Y" style="width: 60px; margin: 0 5px;">
+                    <input id="pathZ" type="number" placeholder="Z" style="width: 60px;">
+                    <button id="btnPathGoto" style="margin-left: 10px;">Go</button>
+                  </div>
+
                   <div class="border">
                     <div class="flex">
                       <p class="tip pr-4 pl-2 border">#</p>
@@ -569,9 +583,8 @@
                   <div class="mu-1">
                     <p class="text-sm mu-4">Commands</p>
                     <p class="text-sm-2 mu-2"><code>follow (player)</code>Follows a player</p>
-                    <p class="text-sm-2"><code>followLine (player)</code>Forms a line</p>
-                    <p class="text-sm-2"><code>goto X Y Z / X Z</code>Walks to a location</p>
-                    <p class="text-sm-2"><code>stop</code>Stops pathfinder</p>
+                    <p class="text-sm-2"><code>goto X Y Z</code>Walks to a location</p>
+                    <button id="btnPathStop" class="mu-2">Stop Pathfinder</button>
                   </div>
 
                 </div>
@@ -609,7 +622,8 @@
           <div class="space-h">
             <div class="m-4 flex-c">
               <p class="text-sm">Script</p>
-              <textarea id="scriptText" class="textbox" style="width: 300px; height: 350px;" spellcheck="false" placeholder="Chat Hello!"></textarea>
+              <textarea id="scriptText" class="textbox" style="width: 300px; height: 350px;" spellcheck="false"
+                placeholder="Chat Hello!"></textarea>
               <div class="space-h mu-2">
                 <div>
                   <button id="runScript">Start</button>
@@ -652,12 +666,13 @@
                     <option value="none">None</option>
                     <option value="socks4">SOCKS4</option>
                     <option value="socks5">SOCKS5</option>
-                    <option value="http" disabled >HTTP [P]</option>
+                    <option value="http" disabled>HTTP [P]</option>
                   </select>
                 </div>
               </div>
 
-              <textarea id="proxyList" class="textbox" style="width: 300px; height: 350px;" placeholder="Proxy:Port:Username:Password"></textarea>
+              <textarea id="proxyList" class="textbox" style="width: 300px; height: 350px;"
+                placeholder="Proxy:Port:Username:Password"></textarea>
               <div class="space-h mu-2">
                 <div>
                   <button id="proxyTestStart">Test</button>
@@ -800,10 +815,29 @@
                   <p class="gradient" style="font-size: 50px;">TrafficerMC</p>
                 </div>
 
-                <div class="m-4 pl-2 space-h">
-                  <a href="https://discord.com/invite/uFpaAZdVgS" target="_blank" rel="noreferrer" class="tip">Discord</a>
-                  <a href="https://youtube.com/rattleshyper" target="_blank" rel="noreferrer" class="tip">YouTube</a>
-                  <a href="https://github.com/RattlesHyper/TrafficerMC" target="_blank" rel="noreferrer" class="tip">GitHub</a>
+                <div class="m-4 pl-2 space-h" style="justify-content: center;">
+                  <a href="https://github.com/ACxeno/TrafficerMC" target="_blank" rel="noreferrer"
+                    class="tip">GitHub</a>
+                </div>
+
+                <div class="mu-4"
+                  style="text-align: center; border: 1px solid #333; padding: 15px; border-radius: 8px; background: rgba(0,0,0,0.2);">
+                  <p class="text-sm border-b"
+                    style="display: inline-block; padding-bottom: 5px; color: #00ffcc; font-weight: bold;">Update</p>
+                  <div class="mu-2" style="text-align: left; padding-left: 10px;">
+                    <p class="tip-sm" style="font-size: 11px;">• <b>Dynamic AI Pathfinder</b>: Supports Auto-Dig,
+                      Scaffolding & Parkour logic.</p>
+                    <p class="tip-sm" style="font-size: 11px;">• <b>Advanced Nuker Algorithm</b>: High-precision
+                      Integer-based mining.</p>
+                    <p class="tip-sm" style="font-size: 11px;">• <b>Concurrent Proxy Checker</b>: Multi-threaded
+                      validation engine (10x faster).</p>
+                    <p class="tip-sm" style="font-size: 11px;">• <b>Asynchronous Webhooks</b>: Real-time Discord
+                      integration for bot events.</p>
+                    <p class="tip-sm" style="font-size: 11px;">• <b>Memory & CPU Optimization</b>: Optimized Config
+                      Caching & Squared Math.</p>
+                    <p class="tip-sm" style="font-size: 11px;">• <b>Extended Protocol Support</b>: Fully compatible with
+                      v1.21.11+.</p>
+                  </div>
                 </div>
 
               </div>
@@ -844,20 +878,20 @@
         </div>
 
         <label class="containerCheckbox mu-2">
-          Physics [Premium]
-          <input id="togglePhysics" type="checkbox" checked disabled>
+          Physics
+          <input id="togglePhysics" type="checkbox" checked>
           <span class="checkmark"></span>
         </label>
 
         <label class="containerCheckbox mu-2">
-          Map notifications [Premium]
-          <input id="mapNotifications" type="checkbox" disabled>
+          Map notifications
+          <input id="mapNotifications" type="checkbox">
           <span class="checkmark"></span>
         </label>
 
         <label class="containerCheckbox mu-2">
-          Accept resource packs [Premium]
-          <input id="acceptResourcePacks" type="checkbox" disabled>
+          Accept resource packs
+          <input id="acceptResourcePacks" type="checkbox">
           <span class="checkmark"></span>
         </label>
 
@@ -876,32 +910,32 @@
         </label>
 
         <label class="containerCheckbox mu-1">
-          Chat [Premium]
-          <input id="chatLogChat" type="checkbox" checked disabled>
+          Chat
+          <input id="chatLogChat" type="checkbox" checked>
           <span class="checkmark"></span>
         </label>
 
         <label class="containerCheckbox mu-1">
-          Feedback [Premium]
-          <input id="feedbackLogChat" type="checkbox" checked disabled>
+          Feedback
+          <input id="feedbackLogChat" type="checkbox" checked>
           <span class="checkmark"></span>
         </label>
 
         <label class="containerCheckbox mu-1">
-          Join [Premium]
-          <input id="joinLogChat" type="checkbox" checked disabled>
+          Join
+          <input id="joinLogChat" type="checkbox" checked>
           <span class="checkmark"></span>
         </label>
 
         <label class="containerCheckbox mu-1">
-          Kicks [Premium]
-          <input id="kickLogChat" type="checkbox" checked disabled>
+          Kicks
+          <input id="kickLogChat" type="checkbox" checked>
           <span class="checkmark"></span>
         </label>
 
         <label class="containerCheckbox mu-1">
-          Auth message [Premium]
-          <input id="authLogChat" type="checkbox" checked disabled>
+          Auth message
+          <input id="authLogChat" type="checkbox" checked>
           <span class="checkmark"></span>
         </label>
 

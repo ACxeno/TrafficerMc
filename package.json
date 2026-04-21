@@ -3,7 +3,7 @@
   "version": "3.1.0",
   "description": "A Minecraft botting tool with Anti-AFK, Chat spammer, Inventory/Chest manager features.",
   "main": "./out/main/index.js",
-  "author": "RattlesHyper",
+  "author": "ACxeno",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
@@ -21,6 +21,7 @@
     "@electron-toolkit/utils": "^3.0.0",
     "electron-store": "^8.2.0",
     "mineflayer": "^4.20.1",
+    "mineflayer-pathfinder": "^2.4.5",
     "socks": "^2.8.3"
   },
   "devDependencies": {
